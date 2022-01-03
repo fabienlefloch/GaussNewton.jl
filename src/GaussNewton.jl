@@ -1,6 +1,6 @@
 module GaussNewton
 
-using LinearAlgebra, ForwardDiff, FiniteDiff
+using LinearAlgebra, ForwardDiff, FiniteDiff, Printf
 
 export optimize, optimize!, has_converged, is_fatal
 
@@ -46,6 +46,21 @@ has_converged(result::GNResult) = has_converged_abstol(result) || has_converged_
 has_converged_stptol(result::GNResult) = result.info & 0x1 == 0x1
 has_converged_reltol(result::GNResult) = result.info & 0x2 == 0x2
 has_converged_abstol(result::GNResult) = result.info & 0x8 == 0x8
+
+function Base.show(io::IO, r::GNResult)
+    @printf io "Results of Gauss-Newton Algorithm\n"
+    @printf io " * Minimizer: [%s]\n" join(r.minimizer, ",")
+    @printf io " * Sum of squares at Minimum: %f\n" r.ssr
+    @printf io " * Iterations: %d\n" r.iterations
+    @printf io " * Convergence: %s\n" has_converged(r)
+    @printf io " * |x - x'| < %.1e: %s\n" r.stptol has_converged_stptol(r)
+    @printf io " * |f(x) - f(x')| / |f(x)| < %.1e: %s\n" r.reltol has_converged_reltol(r)
+    @printf io " * |f(x)| < %.1e: %s\n" r.abstol has_converged_abstol(r)
+    @printf io " * Function Calls: %d\n" r.f_calls
+    @printf io " * Gradient Calls: %d\n" r.g_calls
+    @printf io " * Trace: %s\n" join(r.tr.states, "\n")
+    return
+end
 
 #stptol in: step size for relative convergence test.
 # ! reltol, abstol in: value relative/absolute convergence test.
@@ -621,7 +636,7 @@ function optimize!(fcn!, fcnDer!, x0::AbstractArray{T}, r::AbstractArray{TR};
         @. x = x0 + s * D
     end
     # abs(f - f0) <= max(reltol * max(f, f0), abstol)
-    return f0, GNResult(f0, r0, Jac0, info, itersave, reltol, abstol, stptol, tr, f_calls, g_calls)
+    return f0, GNResult(f0, x0, Jac0, info, itersave, reltol, abstol, stptol, tr, f_calls, g_calls)
 end
 
 
